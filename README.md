@@ -1,126 +1,200 @@
-# Image Bench 多模型生图测评站
+<div align="center">
 
-面向办公与程序员真实任务的本地多模型生图对比工具。一次输入相同提示词，可并行比较 2–6 个模型，记录耗时、六维人工评分与胜出模型，并导出带图片的 Markdown 测评 Blog。
+# ImageBench
 
-## 本地启动（Windows）
+**在同一个工作台里，用相同提示词并行比较多个图像与视频生成模型。**
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/magau123/ImageBench?style=social)](https://github.com/magau123/ImageBench)
+
+[功能](#功能) · [快速开始](#快速开始) · [模型接入](#模型接入) · [使用方法](#使用方法) · [开发](#开发) · [路线图](#路线图)
+
+</div>
+
+## 项目简介
+
+ImageBench 是一个本地优先、BYOK（Bring Your Own Key）的多模型生成效果对比工具。它将同一条 Prompt 并行发送给多个模型，以统一卡片展示结果、耗时和错误，并支持人工评分、最佳结果标记、历史记录以及报告导出。
+
+它不仅是模型 Demo，更面向真实交付场景：
+
+- 软件架构图、流程图、ERD、DevSecOps、数据血缘等开发者任务
+- PPT、经营看板、项目路线图、BPMN、年度报告等办公任务
+- 任意自定义图像 Prompt
+- 多镜头文生视频与不同 Wan 模型横向对比
+
+## 功能
+
+### 图像测评
+
+- 同一 Prompt 并行调用 2–6 个模型
+- 内置 20 个高难度办公与程序员实战题
+- 支持完全自定义 Prompt
+- 8 个评分维度、单模型重跑、胜出标记和同步缩放
+- 浏览器 IndexedDB 本地历史
+- 导出 `report.md + images/` 测评 Blog；不支持目录 API 时回退为自包含 HTML
+
+### 视频测评
+
+- 同一 Prompt 并行比较 2–4 个万相视频模型
+- 支持 `wan3.0-video`、Wan 2.7 和 Wan 2.6
+- 可设置 720P / 1080P、16:9 / 9:16 / 1:1、5 / 10 / 15 秒
+- 原生视频播放、单模型重跑、六维评分、最佳结果标记和下载
+- 按百炼官方异步协议自动创建任务并轮询结果
+
+### 密钥与隐私
+
+- API Key 不写入仓库
+- 网页中填写的 Key 只保存在当前浏览器会话
+- Key 仅发送到本机 Next.js API 路由及对应模型供应商
+- 默认无需登录、数据库或 Docker
+
+## 快速开始
+
+### 环境要求
+
+- Node.js 20 或更高版本
+- npm
+- 至少一个已开通模型服务的 API Key
+
+### Windows
 
 ```powershell
+git clone https://github.com/magau123/ImageBench.git
+cd ImageBench
 npm install
-Copy-Item .env.example .env.local  # 可选，也可在网页内临时填写 Key
+Copy-Item .env.example .env.local
 npm run dev
 ```
 
-打开 <http://localhost:3000>。无需 Docker。网页中填写的 API Key 只保存在当前浏览器会话，并随生成请求发送到本机 Next.js 服务；不要在不可信的远程实例填写密钥。
+打开 <http://localhost:3000>。
 
-支持 OpenAI、Google Vertex AI、Replicate、Fireworks、阿里云百炼千问生图，以及可自定义 Base URL 和模型 ID 的 OpenAI-compatible / NewAPI 网关。百炼可直接选择 `qwen-image-3.0-pro` 等模型，只需填写百炼 API Key，无需配置兼容地址。官方供应商也可通过 `.env.local` 配置（Vertex 使用服务端环境变量）。
+### macOS / Linux
 
-```powershell
+```bash
+git clone https://github.com/magau123/ImageBench.git
+cd ImageBench
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+## 配置
+
+所有环境变量都是可选的。你也可以直接在网页的模型卡片中临时填写 Key。
+
+```dotenv
+OPENAI_API_KEY=
+REPLICATE_API_TOKEN=
+FIREWORKS_API_KEY=
+DASHSCOPE_API_KEY=
+
+GOOGLE_CLIENT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_VERTEX_LOCATION=us-central1
+GOOGLE_VERTEX_PROJECT=
+```
+
+不要提交 `.env.local`。项目的 `.gitignore` 已默认排除本地环境变量文件。
+
+## 模型接入
+
+图像生成当前支持：
+
+- OpenAI：`gpt-image-1`、DALL·E
+- OpenAI 兼容 / NewAPI：默认 `https://apinebula.ai/v1`，内置 `gpt-image-2.5`、`gpt-image-2` 等模型 ID
+- 阿里云百炼千问生图：`qwen-image-3.0-pro`、`qwen-image-3.0`、Qwen Image 2.0 系列
+- Google Vertex AI
+- Replicate
+- Fireworks
+
+视频生成当前支持阿里云百炼万相：
+
+- `wan3.0-video`
+- `wan2.7-t2v`
+- `wan2.7-t2v-2026-06-12`
+- `wan2.6-t2v`
+
+百炼视频链接有效期为 24 小时，请及时下载。视频按分辨率和时长计费，运行前请确认[百炼模型价格与限额](https://help.aliyun.com/zh/model-studio/text-to-video-guide)。
+
+## 使用方法
+
+### 比较图像模型
+
+1. 选择实战题库，或点击“自定义 Prompt”。
+2. 增加 2–6 个模型窗口。
+3. 选择供应商和模型，填写对应 API Key。
+4. 点击“开始对比”。
+5. 对结果评分、标记最佳，并按需导出 Blog。
+
+### 比较视频模型
+
+1. 在顶部切换到“视频测评”。
+2. 输入包含主体、动作、运镜、分镜时间和声音要求的 Prompt。
+3. 选择分辨率、宽高比、时长和 2–4 个 Wan 模型。
+4. 点击“开始视频对比”并等待异步任务完成。
+5. 播放、评分、选优并及时下载结果。
+
+## 工作原理
+
+```mermaid
+flowchart LR
+    User[Prompt 与模型配置] --> UI[Next.js 工作台]
+    UI --> ImageAPI[图像生成 API]
+    UI --> VideoAPI[视频任务 API]
+    ImageAPI --> Providers[模型供应商]
+    VideoAPI --> Submit[提交百炼异步任务]
+    Submit --> Poll[轮询任务状态]
+    Poll --> Providers
+    Providers --> Results[并排结果与评分]
+    Results --> History[IndexedDB 历史]
+    Results --> Report[Markdown / HTML 报告]
+```
+
+## 开发
+
+```bash
 npm run self-check
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-历史与图片保存在浏览器 IndexedDB。Chrome/Edge 可将 Blog 导出为 `report.md + images/`；其他浏览器回退为自包含 HTML。
+主要目录：
 
-## 上游项目与许可证
+```text
+app/api/                  服务端模型适配与密钥代理
+components/               图像、视频工作台及 UI
+lib/benchmarks.ts         实战题库与评分维度
+lib/provider-config.ts    图像供应商与模型配置
+lib/history.ts            IndexedDB 历史适配
+lib/report.ts             测评报告生成与导出
+```
 
-本项目基于 Apache-2.0 许可的 [Vercel AI SDK Image Generator](https://github.com/vercel-labs/ai-sdk-image-generator) 改造，原始说明保留如下。
+## 路线图
 
----
+- [ ] 视频历史记录与报告导出
+- [ ] 图生视频与首尾帧生成
+- [ ] 更多视频供应商适配
+- [ ] 批量 Prompt × 模型矩阵测试
+- [ ] 盲测模式与 Elo 排名
+- [ ] 可选的服务端团队协作存储
 
-<a href="https://ai-sdk-image-generator.vercel.app">
-  <img alt="Next.js 14 and App Router AI SDK Image Generator." src="https://ai-sdk-image-generator.vercel.app/opengraph-image.png">
-  <h1 align="center">AI SDK Image Generator</h1>
-</a>
+## 贡献
 
-<p align="center">
-  An open-source AI image generation app template built with Next.js, the AI SDK by Vercel, and various AI providers (Replicate, Fireworks, Google Vertex AI, OpenAI).
-</p>
+欢迎提交 Issue 和 Pull Request。新增供应商时，请保持 API Key 只在服务端路由中使用，并为非平凡转换逻辑补充最小可运行检查。
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#model-providers"><strong>Model Providers</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#running-locally"><strong>Running Locally</strong></a> ·
-  <a href="#authors"><strong>Authors</strong></a>
-</p>
-<br/>
+提交信息使用 Conventional Commits：
 
-## Features
+```text
+feat: add a provider
+fix: handle failed async task
+docs: improve setup guide
+```
 
-- Supports image generation using [`generateImage`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/generate-image) from the [AI SDK by Vercel](https://sdk.vercel.ai/docs), allowing multiple AI providers to be used interchangeably with just a few lines of code.
-- A single input to generate images across multiple providers simultaneously.
-- [shadcn/ui](https://ui.shadcn.com/) components for a modern, responsive UI powered by [Tailwind CSS](https://tailwindcss.com).
-- Built with the latest [Next.js](https://nextjs.org) App Router (version 15).
+## 许可证与致谢
 
-## Model Providers
+本项目使用 [Apache License 2.0](LICENSE)。
 
-This template includes the following providers by default:
-
-- [Replicate](https://sdk.vercel.ai/providers/ai-sdk-providers/replicate)
-- [Google Vertex AI](https://sdk.vercel.ai/providers/ai-sdk-providers/google-vertex)
-- [OpenAI](https://sdk.vercel.ai/providers/ai-sdk-providers/openai)
-- [Fireworks](https://sdk.vercel.ai/providers/ai-sdk-providers/fireworks)
-
-You can easily add or remove providers (and their associated models) by updating the configuration in the codebase.
-
-## Deploy Your Own
-
-You can deploy your own version of the AI SDK Image Generator to Vercel by clicking the button below:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-image-generator&env=FIREWORKS_API_KEY,GOOGLE_CLIENT_EMAIL,GOOGLE_PRIVATE_KEY_ID,GOOGLE_VERTEX_LOCATION,GOOGLE_VERTEX_PROJECT,OPENAI_API_KEY,REPLICATE_API_TOKEN&envDescription=AI%20Provider%20API%20keys%20required%20for%20this%20demo.&envLink=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-image-generator&demo-title=AI%20SDK%20Image%20Generator&demo-description=%20%20An%20open-source%20AI%20image%20generation%20app%20template%20built%20with%20Next.js%2C%20the%20AI%20SDK%20by%20Vercel%2C%20and%20various%20AI%20providers%20(Replicate%2C%20Fireworks%2C%20Google%20Vertex%20AI%2C%20OpenAI).&demo-url=https%3A%2F%2Fai-sdk-image-generator.vercel.app%2F&demo-image=https%3A%2F%2Fai-sdk-image-generator.vercel.app%2Fopengraph-image.png)
-
-## Running Locally
-
-1. Clone the repository and install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
-
-2. Create an `.env.local` file (or set Environment Variables in your Vercel dashboard) to store any necessary API keys for the providers you plan to use. There is an `.env.example` file that you can use as a reference.
-
-   ```
-   # Standard API keys
-   OPENAI_API_KEY=...
-   REPLICATE_API_TOKEN=...
-   FIREWORKS_API_KEY=...
-
-   # Google Vertex AI settings
-   GOOGLE_CLIENT_EMAIL=...        # From your service account JSON file
-   GOOGLE_PRIVATE_KEY=...         # From your service account JSON file
-   GOOGLE_VERTEX_PROJECT=...      # Your Google Cloud project ID
-   GOOGLE_VERTEX_LOCATION=...     # e.g., "us-central1"
-   ```
-
-   For Google Vertex AI setup:
-   - Get your service account credentials from the Google Cloud Console
-   - The values for `GOOGLE_CLIENT_EMAIL` and `GOOGLE_PRIVATE_KEY` can be found in your service account JSON file
-   - Set `GOOGLE_VERTEX_LOCATION` to your preferred region (e.g., "us-central1")
-   - Set `GOOGLE_VERTEX_PROJECT` to your Google Cloud project ID
-
-   For more details on Google Vertex AI configuration, see the [AI SDK documentation](https://sdk.vercel.ai/providers/ai-sdk-providers/google-vertex#edge-runtime).
-
-3. Run the development server:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) to view your new AI image generator application.
-
-## Authors
-
-This repository is maintained by the [Vercel](https://vercel.com) team and community contributors. Special thanks to:
-
-- Walter Korman ([@shaper](https://x.com/shaper)) - [Vercel](https://vercel.com)
-- Nico Albanese ([@nicoalbanese10](https://x.com/nicoalbanese10)) - [Vercel](https://vercel.com)
-
-Contributions are welcome! Feel free to open issues or submit pull requests to enhance functionality or fix bugs.
+ImageBench 基于 Vercel Labs 的 [AI SDK Image Generator](https://github.com/vercel-labs/ai-sdk-image-generator) 改造，并保留其版权和许可证声明。感谢 Vercel AI SDK、Next.js、Tailwind CSS、阿里云百炼及所有相关开源项目。

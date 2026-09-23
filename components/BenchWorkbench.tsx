@@ -41,7 +41,7 @@ const withoutSecret = ({ id, provider, modelId, baseUrl }: ModelSlot) => ({
   baseUrl,
 });
 
-export function BenchWorkbench() {
+export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) {
   const [slots, setSlots] = useState<ModelSlot[]>([]);
   const [prompt, setPrompt] = useState(BENCHMARKS[0].prompt);
   const [benchmarkId, setBenchmarkId] = useState(BENCHMARKS[0].id);
@@ -268,7 +268,7 @@ export function BenchWorkbench() {
 
   return (
     <main className="min-h-screen bg-[#f5f4ef] text-slate-950">
-      <header className="border-b border-black/10 bg-[#101b18] text-white">
+      {showHeader && <header className="border-b border-black/10 bg-[#101b18] text-white">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-5 py-5">
           <div>
             <div className="flex items-center gap-2 text-lg font-semibold">
@@ -282,7 +282,7 @@ export function BenchWorkbench() {
             BYOK · 密钥仅保存在当前浏览器会话
           </div>
         </div>
-      </header>
+      </header>}
 
       <div className="mx-auto grid max-w-[1600px] gap-5 p-5 xl:grid-cols-[280px_1fr]">
         <aside className="space-y-4">

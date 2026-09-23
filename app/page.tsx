@@ -1,7 +1,7 @@
-import { BenchWorkbench } from "@/components/BenchWorkbench";
+import { StudioApp } from "@/components/StudioApp";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <BenchWorkbench />;
+  return <StudioApp />;
 }

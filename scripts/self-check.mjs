@@ -6,6 +6,7 @@ import {
   validateBenchmarks,
 } from "../lib/benchmarks.ts";
 import { buildMarkdown } from "../lib/report.ts";
+import { buildVideoParameters, VIDEO_MODELS } from "../lib/video.ts";
 
 test("benchmark library has unique, usable office and developer prompts", () => {
   assert.equal(validateBenchmarks(), true);
@@ -50,4 +51,28 @@ test("report contains prompt, ranking, scores and image links", () => {
   assert.match(markdown, /5\.00 \/ 5/);
   assert.match(markdown, /images\/model-a\.png/);
   assert.match(markdown, /mock failure/);
+});
+
+test("video models use the correct DashScope protocol parameters", () => {
+  assert.ok(VIDEO_MODELS.includes("wan3.0-video"));
+  assert.deepEqual(
+    buildVideoParameters("wan3.0-video", "720P", "16:9", 5),
+    {
+      resolution: "720P",
+      ratio: "16:9",
+      duration: 5,
+      prompt_extend: false,
+      watermark: false,
+    },
+  );
+  assert.deepEqual(
+    buildVideoParameters("wan2.6-t2v", "1080P", "9:16", 10),
+    {
+      size: "1080*1920",
+      duration: 10,
+      prompt_extend: true,
+      shot_type: "multi",
+      watermark: false,
+    },
+  );
 });

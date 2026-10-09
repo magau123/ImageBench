@@ -4,7 +4,8 @@ export type ProviderKey =
   | "replicate"
   | "fireworks"
   | "vertex"
-  | "dashscope";
+  | "dashscope"
+  | "nanobanana";
 
 export interface ProviderDefinition {
   displayName: string;
@@ -87,6 +88,39 @@ export const PROVIDERS: Record<ProviderKey, ProviderDefinition> = {
     color: "from-orange-500 to-amber-500",
     envHint: "DASHSCOPE_API_KEY",
   },
+  nanobanana: {
+    displayName: "NanoBanana · APINebula 中转",
+    defaultModel: "gemini-3.1-flash-image",
+    models: [
+      "gemini-3.1-flash-image",
+      "gemini-3-pro-image-preview",
+      "gemini-2.5-flash-image",
+      "gemini-3.1-flash-image-preview",
+      "gemini-2.5-flash-image-preview",
+    ],
+    iconPath: "/provider-icons/vertex.svg",
+    color: "from-yellow-400 to-amber-500",
+    envHint: "NANOBANANA_API_KEY",
+  },
+};
+
+const KEY_STORE = "image-bench-keys";
+
+export const loadSavedKeys = (): Record<string, string> => {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(KEY_STORE) ?? "{}");
+  } catch {
+    return {};
+  }
+};
+
+// Clearing the input removes the saved key; otherwise keys persist until browser data is cleared.
+export const saveKey = (provider: string, value: string) => {
+  const keys = loadSavedKeys();
+  if (value) keys[provider] = value;
+  else delete keys[provider];
+  localStorage.setItem(KEY_STORE, JSON.stringify(keys));
 };
 
 export interface ModelSlot {
@@ -104,7 +138,7 @@ export const createSlot = (
   id,
   provider,
   modelId: PROVIDERS[provider].defaultModel,
-  apiKey: "",
+  apiKey: loadSavedKeys()[provider] ?? "",
   baseUrl: PROVIDERS[provider].defaultBaseUrl ?? "",
 });
 

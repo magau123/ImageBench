@@ -1,4 +1,4 @@
-import { SCORE_DIMENSIONS } from "./benchmarks.ts";
+import { BENCHMARKS, SCORE_DIMENSIONS } from "./benchmarks.ts";
 import { averageScore } from "./evaluation.ts";
 import type { EvaluationSession } from "./evaluation.ts";
 
@@ -17,12 +17,16 @@ export const buildMarkdown = (
     (a, b) => (a.elapsed ?? Infinity) - (b.elapsed ?? Infinity),
   )[0];
   const winner = ranked.find((result) => result.winner) ?? ranked[0];
+  const benchmark = BENCHMARKS.find((item) => item.id === session.benchmarkId);
 
   const lines = [
     `# ${session.title}`,
     "",
     `> 测评时间：${new Date(session.createdAt).toLocaleString("zh-CN")}`,
     "",
+    ...(benchmark
+      ? [`- 测试类别：${benchmark.category}`, `- 验收重点：${benchmark.goal}`, ""]
+      : []),
     "## 测评方法",
     "",
     `本次使用完全相同的提示词并行测试 ${session.results.length} 个模型，从${SCORE_DIMENSIONS.join("、")}共 ${SCORE_DIMENSIONS.length} 个维度进行人工评分（1–5 分）。`,

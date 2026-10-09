@@ -13,6 +13,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import { loadSavedKeys, saveKey } from "@/lib/provider-config";
 import {
   VIDEO_MODELS,
   VideoRatio,
@@ -70,21 +71,12 @@ export function VideoWorkbench() {
 
   useEffect(() => {
     setSlots([createSlot("wan3.0-video"), createSlot("wan2.7-t2v")]);
-    const saved = sessionStorage.getItem("image-bench-keys");
-    if (saved) {
-      const keys = JSON.parse(saved) as Record<string, string>;
-      setApiKey(keys.dashscope ?? "");
-    }
+    setApiKey(loadSavedKeys().dashscope ?? "");
   }, []);
 
-  const saveKey = (value: string) => {
+  const updateKey = (value: string) => {
     setApiKey(value);
-    const saved = sessionStorage.getItem("image-bench-keys");
-    const keys = saved ? (JSON.parse(saved) as Record<string, string>) : {};
-    sessionStorage.setItem(
-      "image-bench-keys",
-      JSON.stringify({ ...keys, dashscope: value }),
-    );
+    saveKey("dashscope", value);
   };
 
   const runSlot = async (slot: VideoSlot) => {
@@ -215,7 +207,7 @@ export function VideoWorkbench() {
             <input
               type="password"
               value={apiKey}
-              onChange={(event) => saveKey(event.target.value)}
+              onChange={(event) => updateKey(event.target.value)}
               placeholder="百炼 API Key（可使用环境变量）"
               className="field md:col-span-2"
               autoComplete="off"

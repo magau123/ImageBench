@@ -9,6 +9,7 @@ import { ProviderKey } from "@/lib/provider-config";
 const TIMEOUT_MILLIS = 180_000;
 const DASHSCOPE_ENDPOINT =
   "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation";
+const NANOBANANA_ENDPOINT = "https://img-api.apinebula.ai/v1beta/models";
 
 interface GenerateRequest {
   prompt: string;
@@ -99,6 +100,56 @@ const generateWithDashScope = async ({
   return { image, mediaType };
 };
 
+interface NanoBananaResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> };
+  }>;
+  error?: { message?: string };
+}
+
+const generateWithNanoBanana = async ({
+  prompt,
+  modelId,
+  apiKey,
+  size,
+}: {
+  prompt: string;
+  modelId: string;
+  apiKey: string;
+  size?: GenerateRequest["size"];
+}) => {
+  const response = await fetch(
+    `${NANOBANANA_ENDPOINT}/${encodeURIComponent(modelId)}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt.trim() }] }],
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: {
+            aspectRatio:
+              size === "1536x1024" ? "3:2" : size === "1024x1536" ? "2:3" : "1:1",
+            imageSize: "1K",
+          },
+        },
+      }),
+    },
+  );
+  const data = (await response.json().catch(() => ({}))) as NanoBananaResponse;
+  if (!response.ok) {
+    throw new Error(data.error?.message || `NanoBanana 请求失败 (${response.status})`);
+  }
+  const inline = data.candidates?.[0]?.content?.parts?.find(
+    (part) => part.inlineData?.data,
+  )?.inlineData;
+  if (!inline?.data) throw new Error("NanoBanana 响应中没有生成图片");
+  return { image: inline.data, mediaType: inline.mimeType || "image/png" };
+};
+
 export async function POST(req: NextRequest) {
   const requestId = Math.random().toString(36).slice(2);
   const body = (await req.json()) as GenerateRequest;
@@ -124,6 +175,21 @@ export async function POST(req: NextRequest) {
           apiKey: key,
           size: body.size,
         }),
+        TIMEOUT_MILLIS,
+      );
+      return NextResponse.json({ provider, ...result });
+    }
+
+    if (provider === "nanobanana") {
+      const key = apiKey || process.env.NANOBANANA_API_KEY;
+      if (!key) {
+        return NextResponse.json(
+          { error: "请填写 nanobanana 分组的 API Key，或配置 NANOBANANA_API_KEY" },
+          { status: 400 },
+        );
+      }
+      const result = await withTimeout(
+        generateWithNanoBanana({ prompt, modelId, apiKey: key, size: body.size }),
         TIMEOUT_MILLIS,
       );
       return NextResponse.json({ provider, ...result });

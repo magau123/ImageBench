@@ -1,14 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BENCHMARKS, SCORE_DIMENSIONS, ScoreDimension } from "@/lib/benchmarks";
+import {
+  BENCHMARK_GROUPS,
+  BENCHMARKS,
+  benchmarkGroup,
+  benchmarkSubcategory,
+  SCORE_DIMENSIONS,
+  ScoreDimension,
+} from "@/lib/benchmarks";
 import {
   averageScore,
   EvaluationSession,
   GenerationResult,
 } from "@/lib/evaluation";
 import { clearSessions, listSessions, saveSession } from "@/lib/history";
-import { createSlot, ModelSlot, PROVIDERS, ProviderKey } from "@/lib/provider-config";
+import {
+  createSlot,
+  loadSavedKeys,
+  ModelSlot,
+  PROVIDERS,
+  ProviderKey,
+  saveKey,
+} from "@/lib/provider-config";
 import { exportReport } from "@/lib/report";
 import {
   Clock3,
@@ -45,6 +59,7 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
   const [slots, setSlots] = useState<ModelSlot[]>([]);
   const [prompt, setPrompt] = useState(BENCHMARKS[0].prompt);
   const [benchmarkId, setBenchmarkId] = useState(BENCHMARKS[0].id);
+  const [group, setGroup] = useState<string>(BENCHMARK_GROUPS[0].name);
   const [title, setTitle] = useState(BENCHMARKS[0].title);
   const [results, setResults] = useState<GenerationResult[]>([]);
   const [running, setRunning] = useState<Set<string>>(new Set());
@@ -55,24 +70,9 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
   const importInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const initial = newInitialSlots();
-    const savedKeys = sessionStorage.getItem("image-bench-keys");
-    const keys = savedKeys ? (JSON.parse(savedKeys) as Record<string, string>) : {};
-    setSlots(initial.map((slot) => ({ ...slot, apiKey: keys[slot.provider] ?? "" })));
+    setSlots(newInitialSlots());
     listSessions().then(setSessions).catch(() => setNotice("无法读取本地历史"));
   }, []);
-
-  useEffect(() => {
-    if (!slots.length) return;
-    sessionStorage.setItem(
-      "image-bench-keys",
-      JSON.stringify(
-        Object.fromEntries(
-          slots.filter((slot) => slot.apiKey).map((slot) => [slot.provider, slot.apiKey]),
-        ),
-      ),
-    );
-  }, [slots]);
 
   const currentSession = useMemo<EvaluationSession>(
     () => ({
@@ -117,7 +117,15 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
       provider,
       modelId: PROVIDERS[provider].defaultModel,
       baseUrl: PROVIDERS[provider].defaultBaseUrl ?? "",
+      apiKey: loadSavedKeys()[provider] ?? "",
     });
+
+  const updateKey = (provider: ProviderKey, apiKey: string) => {
+    saveKey(provider, apiKey);
+    setSlots((current) =>
+      current.map((slot) => (slot.provider === provider ? { ...slot, apiKey } : slot)),
+    );
+  };
 
   const runSlot = async (slot: ModelSlot) => {
     const started = performance.now();
@@ -233,7 +241,10 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
     setTitle(session.title);
     setPrompt(session.prompt);
     setBenchmarkId(session.benchmarkId ?? "");
-    setSlots(session.slots.map((slot) => ({ ...slot, apiKey: "" })));
+    const benchmark = BENCHMARKS.find((item) => item.id === session.benchmarkId);
+    if (benchmark) setGroup(benchmarkGroup(benchmark));
+    const keys = loadSavedKeys();
+    setSlots(session.slots.map((slot) => ({ ...slot, apiKey: keys[slot.provider] ?? "" })));
     setResults(session.results);
   };
 
@@ -279,7 +290,7 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
             </p>
           </div>
           <div className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/65">
-            BYOK · 密钥仅保存在当前浏览器会话
+            BYOK · 密钥仅保存在本机浏览器
           </div>
         </div>
       </header>}
@@ -289,7 +300,30 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
           <section className="panel">
             <div className="mb-3 flex items-center gap-2 font-semibold">
               <FolderClock className="h-4 w-4" /> 实战题库
+              <span className="ml-auto text-xs font-normal text-black/40">
+                {BENCHMARKS.length} 题
+              </span>
             </div>
+            <div className="mb-2 flex flex-wrap gap-1">
+              {BENCHMARK_GROUPS.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => setGroup(item.name)}
+                  title={item.desc}
+                  className={`rounded-full px-2.5 py-1 text-[11px] transition ${
+                    group === item.name
+                      ? "bg-[#101b18] font-semibold text-white"
+                      : "bg-black/5 text-black/60 hover:bg-black/10"
+                  }`}
+                >
+                  {item.name}{" "}
+                  {BENCHMARKS.filter((benchmark) => benchmarkGroup(benchmark) === item.name).length}
+                </button>
+              ))}
+            </div>
+            <p className="mb-2 text-[11px] leading-4 text-black/45">
+              {BENCHMARK_GROUPS.find((item) => item.name === group)?.desc}
+            </p>
             <div className="max-h-[45vh] space-y-1 overflow-auto pr-1">
               <button
                 onClick={startCustomPrompt}
@@ -307,7 +341,7 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
                   输入任意真实生图需求，使用相同提示词并行比较模型
                 </span>
               </button>
-              {BENCHMARKS.map((item) => (
+              {BENCHMARKS.filter((item) => benchmarkGroup(item) === group).map((item) => (
                 <button
                   key={item.id}
                   onClick={() => selectBenchmark(item.id)}
@@ -315,7 +349,9 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
                     benchmarkId === item.id ? "bg-[#dfffad]" : "hover:bg-black/5"
                   }`}
                 >
-                  <span className="block text-[11px] text-black/45">{item.category}</span>
+                  <span className="block text-[11px] text-black/45">
+                    {benchmarkSubcategory(item)}
+                  </span>
                   <span className="text-sm font-medium">{item.title}</span>
                   <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-black/45">
                     {item.goal}
@@ -536,11 +572,9 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
                       <input
                         type="password"
                         value={slot.apiKey}
-                        onChange={(event) =>
-                          patchSlot(slot.id, { apiKey: event.target.value })
-                        }
+                        onChange={(event) => updateKey(slot.provider, event.target.value)}
                         className="field mt-2 w-full"
-                        placeholder={`API Key（留空读取 ${definition.envHint ?? "环境变量"}）`}
+                        placeholder={`API Key（自动保存；留空读取 ${definition.envHint ?? "环境变量"}）`}
                         autoComplete="off"
                       />
                     )}
@@ -553,6 +587,17 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
                       >
                         <ExternalLink className="h-3 w-3" />
                         百炼千问图像生成官方 API 文档
+                      </a>
+                    )}
+                    {slot.provider === "nanobanana" && (
+                      <a
+                        href="https://docs.apinebula.ai/docs/advanced/image/nanobanana"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 flex items-center gap-1 text-[11px] text-amber-700 hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        需使用 nanobanana 分组令牌 · 接入文档
                       </a>
                     )}
                   </div>

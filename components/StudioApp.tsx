@@ -45,7 +45,7 @@ export function StudioApp() {
           </nav>
 
           <div className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/65">
-            BYOK · 密钥仅保存在当前浏览器会话
+            BYOK · 密钥仅保存在本机浏览器
           </div>
         </div>
       </header>

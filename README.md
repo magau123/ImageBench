@@ -46,7 +46,7 @@ ImageBench 是一个本地优先、BYOK（Bring Your Own Key）的多模型生�
 ### 密钥与隐私
 
 - API Key 不写入仓库
-- 网页中填写的 Key 只保存在当前浏览器会话
+- 网页中填写的 Key 按服务商保存在本机浏览器（localStorage），再次选择该服务商时自动填入；清空输入框即删除
 - Key 仅发送到本机 Next.js API 路由及对应模型供应商
 - 默认无需登录、数据库或 Docker
 

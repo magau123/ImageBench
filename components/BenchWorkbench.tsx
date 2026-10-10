@@ -15,6 +15,7 @@ import {
   GenerationResult,
 } from "@/lib/evaluation";
 import { clearSessions, listSessions, saveSession } from "@/lib/history";
+import { normalizeAgnesApiKey } from "@/lib/agnes";
 import {
   createSlot,
   loadSavedKeys,
@@ -121,9 +122,13 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
     });
 
   const updateKey = (provider: ProviderKey, apiKey: string) => {
-    saveKey(provider, apiKey);
+    const value =
+      provider === "agnes" ? normalizeAgnesApiKey(apiKey) : apiKey.trim();
+    saveKey(provider, value);
     setSlots((current) =>
-      current.map((slot) => (slot.provider === provider ? { ...slot, apiKey } : slot)),
+      current.map((slot) =>
+        slot.provider === provider ? { ...slot, apiKey: value } : slot,
+      ),
     );
   };
 
@@ -565,7 +570,11 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
                           patchSlot(slot.id, { baseUrl: event.target.value })
                         }
                         className="field mt-2 w-full"
-                        placeholder="Base URL，例如 https://apinebula.ai/v1"
+                        placeholder={
+                          slot.provider === "agnes"
+                            ? "Base URL（国内 api.agnes-ai.cn/v1 · 国际 apihub.agnes-ai.com/v1）"
+                            : "Base URL，例如 https://apinebula.ai/v1"
+                        }
                       />
                     )}
                     {slot.provider !== "vertex" && (
@@ -598,6 +607,28 @@ export function BenchWorkbench({ showHeader = true }: { showHeader?: boolean }) 
                       >
                         <ExternalLink className="h-3 w-3" />
                         需使用 nanobanana 分组令牌 · 接入文档
+                      </a>
+                    )}
+                    {slot.provider === "seedream" && (
+                      <a
+                        href="https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 flex items-center gap-1 text-[11px] text-sky-700 hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        获取火山方舟 API Key（需先开通对应模型）
+                      </a>
+                    )}
+                    {slot.provider === "agnes" && (
+                      <a
+                        href="https://wiki.agnes-ai.cn/zh-Hans/docs/agnes-image-21-flash"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 flex items-center gap-1 text-[11px] text-violet-700 hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Agnes 文档 · 国际站 Key 请将 Base URL 改为 apihub.agnes-ai.com/v1
                       </a>
                     )}
                   </div>

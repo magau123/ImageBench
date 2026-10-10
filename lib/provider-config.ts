@@ -5,7 +5,9 @@ export type ProviderKey =
   | "fireworks"
   | "vertex"
   | "dashscope"
-  | "nanobanana";
+  | "nanobanana"
+  | "seedream"
+  | "agnes";
 
 export interface ProviderDefinition {
   displayName: string;
@@ -101,6 +103,28 @@ export const PROVIDERS: Record<ProviderKey, ProviderDefinition> = {
     iconPath: "/provider-icons/vertex.svg",
     color: "from-yellow-400 to-amber-500",
     envHint: "NANOBANANA_API_KEY",
+  },
+  seedream: {
+    displayName: "豆包 Seedream · 火山方舟",
+    defaultModel: "doubao-seedream-5-0-pro-260628",
+    models: ["doubao-seedream-5-0-pro-260628", "doubao-seedream-5-0-flash-260915"],
+    iconPath: "/provider-icons/dashscope.svg",
+    color: "from-sky-500 to-indigo-500",
+    envHint: "ARK_API_KEY",
+  },
+  agnes: {
+    displayName: "Agnes AI · 生图",
+    defaultModel: "agnes-image-2.5-flash",
+    models: [
+      "agnes-image-2.5-flash",
+      "agnes-image-2.1-flash",
+      "agnes-image-2.0-flash",
+    ],
+    iconPath: "/provider-icons/openai.svg",
+    color: "from-violet-500 to-fuchsia-500",
+    needsBaseUrl: true,
+    defaultBaseUrl: "https://api.agnes-ai.cn/v1",
+    envHint: "AGNES_API_KEY",
   },
 };
 
